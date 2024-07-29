@@ -1,6 +1,12 @@
 # DJnotes
-
+#### Video Demo:  (https://youtu.be/56tbK4eMN28)
+#### Description:
 DJnotes is a web application that allows DJs to manage their song lists, add notes, and organize their music library.
+In the project you will find some key files, first is app.py, this is where I wrote the main part of my python operation , you can find login , logout , register , index and my database set up in there. 
+If you move on to src.main , in it you will find some python functions that was part of testing on how to fetch song in from spotify website, my first try was url_reader.py (also songinforeader.py) which was to parse html and find the right og elements , but it was too unstable so I didn't use it. 
+Then I moved on to try spotify api instead, with the help of Claude sonnet's guidance , I was able to create a developer account and use api keys to fetch song info using track url. This is proven to be more stable and easier to handle thus I decided to use in final design. 
+Thank you for your time reading this , looking forward to hear your comments. 
+
 
 ## Features
 
