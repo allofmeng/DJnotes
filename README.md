@@ -60,7 +60,7 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 This project is licensed under the Mozilla license, see the license branch for details. 
 
 ## Acknowledgments
-
+- This project is coded with the help of online resources which includes Claude 3.5. 
 - Thanks to Spotify for providing the API to fetch song information.
 - Bootstrap for the responsive design components.
 - Thanks to G.Kiff for the guidance and time to teach me.
