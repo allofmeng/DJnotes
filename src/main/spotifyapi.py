@@ -8,8 +8,8 @@ from urllib.parse import urlparse
 
 
 # Spotify API credentials
-CLIENT_ID = Your Spotify API Client ID
-CLIENT_SECRET = Your Spotify API Client Secret
+CLIENT_ID = '6e7465ad19ce4909a26c666dd8632442'
+CLIENT_SECRET = '379b979870474805946a4308beac0a51'
 
 # Initialize Spotify client
 client_credentials_manager = SpotifyClientCredentials(client_id=CLIENT_ID, client_secret=CLIENT_SECRET)
