@@ -5,11 +5,11 @@ import sqlite3
 from urllib.parse import urlparse
 
 # Initialize the Flask app
-app = Flask(__name__)
+
 
 # Spotify API credentials
-CLIENT_ID = '6e7465ad19ce4909a26c666dd8632442'
-CLIENT_SECRET = '379b979870474805946a4308beac0a51'
+CLIENT_ID = Your Spotify API Client ID
+CLIENT_SECRET = Your Spotify API Client Secret
 
 # Initialize Spotify client
 client_credentials_manager = SpotifyClientCredentials(client_id=CLIENT_ID, client_secret=CLIENT_SECRET)
@@ -41,5 +41,4 @@ def add_song(url: str) -> dict:
     except Exception as e:
         raise Exception(f"Error processing song: {str(e)}")
 
-#if __name__ == '__main__':
-    #app.run(debug=True)
+
