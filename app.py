@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, url_for, flash
+from flask import Flask, render_template, request, redirect, url_for, flash,jsonify
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -6,11 +6,9 @@ import os
 from sqlalchemy import Column, Integer, String, DateTime
 from sqlalchemy.ext.declarative import declarative_base
 from datetime import datetime
-from flask import Flask, render_template, request, redirect, url_for, flash
-from flask_sqlalchemy import SQLAlchemy
-from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
-from werkzeug.security import generate_password_hash, check_password_hash
-import os
+from src.main.spotifyapi import add_song
+from src.main.formattime import format_time
+
 app = Flask(__name__)
 basedir = os.path.abspath(os.path.dirname(__file__))
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(basedir, 'music.db')
@@ -46,8 +44,8 @@ class Song(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(100), nullable=False)
     artist = db.Column(db.String(100), nullable=False)
-    album = db.Column(db.String(100), nullable=False)
-    songlength = db.Column(db.Integer, nullable=False)
+    album = db.Column(db.String(100), nullable=True)
+    songlength = db.Column(db.Integer, nullable=True)
     notes = db.Column(db.String, nullable=True)  # Adjust to nullable if desired
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
 
@@ -61,11 +59,33 @@ def home():
         return redirect(url_for('index'))
     return redirect(url_for('login'))
 
-@app.route('/index')
+
+@app.route('/index', methods=['GET', 'POST'])
 @login_required
 def index():
+    if request.method == 'POST':
+        url = request.form.get('url', '')
+        try:
+            song_info = add_song(url)
+            # Create a new song and add it to the database
+            new_song = Song(
+                title=song_info['title'],
+                artist=song_info['artist'],
+                album=song_info['album'],
+                songlength=song_info['length'],
+                user_id=current_user.id
+            )
+            db.session.add(new_song)
+            db.session.commit()
+            flash(song_info['message'], 'success')  # Flash the success message
+            return jsonify({'success': True, 'song_info': song_info})
+        except Exception as e:
+            flash(f"Error: {str(e)}", 'error')  # Flash the error message
+            return jsonify({'success': False, 'error': str(e)}), 400
+
+    # GET request
     songs = Song.query.filter_by(user_id=current_user.id).all()
-    return render_template('index.html', songs=songs)
+    return render_template('index.html', songs=songs , format_time = format_time)
 
 
 
@@ -136,6 +156,46 @@ def logout():
     logout_user()
     flash('Logged out successfully.')
     return redirect(url_for('index'))
+@app.route('/edit_song/<int:song_id>', methods=['POST'])
+@login_required
+def edit_song(song_id):
+    song = Song.query.get_or_404(song_id)
+    if song.user_id != current_user.id:
+        return jsonify(success=False, error="You don't have permission to edit this song"), 403
+
+    data = request.json
+    song.title = data['title']
+    song.artist = data['artist']
+    song.album = data['album']
+    song.songlength = request.json.get('length', song.songlength)
+    song.notes = data['notes']
+
+    try:
+        db.session.commit()
+        return jsonify(success=True)
+    except Exception as e:
+        db.session.rollback()
+        return jsonify(success=False, error=str(e)), 500
+
+@app.route('/delete_song/<int:song_id>', methods=['POST'])
+@login_required
+def delete_song(song_id):
+    song = Song.query.get_or_404(song_id)
+    if song.user_id != current_user.id:
+        return jsonify(success=False, error="You don't have permission to delete this song"), 403
+
+    try:
+        db.session.delete(song)
+        db.session.commit()
+        return jsonify(success=True)
+    except Exception as e:
+        db.session.rollback()
+        return jsonify(success=False, error=str(e)), 500
+
+
+
+
+
 
 if __name__ == '__main__':
     with app.app_context():

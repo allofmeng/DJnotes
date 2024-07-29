@@ -1,6 +1,6 @@
 from unittest import TestCase
 
-import url_reader
+from src.main import url_reader
 
 
 class UrlReaderTests(TestCase):

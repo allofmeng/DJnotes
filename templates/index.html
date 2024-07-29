@@ -6,6 +6,169 @@
 
 {% block main %}
     <h1>Welcome to DJnotes, {{ current_user.username }}!</h1>
-    <a href="{{ url_for('logout') }}">Logout</a>
+    <a href="{{ url_for('logout') }}" class="btn btn-secondary mb-3">Logout</a>
 
+    <h2>Add a New Song</h2>
+    <form id="songForm" method="POST" action="{{ url_for('index') }}" class="mb-4">
+        <div class="input-group mb-3">
+            <input type="url" name="url" class="form-control" placeholder="Enter Spotify song URL" required>
+            <button type="submit" class="btn btn-primary">Fetch Song Info</button>
+        </div>
+    </form>
+    
+    <div id="result" class="mb-4"></div>
+
+    <h2>Your Songs</h2>
+    {% if songs %}
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>Title</th>
+                    <th>Artist</th>
+                    <th>Album</th>
+                    <th>Length (s)</th>
+                    <th>Notes</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for song in songs %}
+                    <tr data-song-id="{{ song.id }}">
+                        <td><input type="text" class="form-control song-title" value="{{ song.title }}" readonly></td>
+                        <td><input type="text" class="form-control song-artist" value="{{ song.artist }}" readonly></td>
+                        <td><input type="text" class="form-control song-album" value="{{ song.album }}" readonly></td>
+                        <!--<td><input type="number" class="form-control song-length" value="{{ (song.songlength / 1000)|round|int }}" readonly></td>-->
+                        <td><input type="text" class="form-control song-length" value="{{ format_time(song.songlength) }}" readonly></td>
+                        <td><textarea class="form-control song-notes" readonly>{{ song.notes or '' }}</textarea></td>
+                        <td>
+                            <button class="btn btn-sm btn-primary edit-song">Edit</button>
+                            <button class="btn btn-sm btn-success save-song" style="display:none;">Save</button>
+                            <button class="btn btn-sm btn-danger delete-song">Delete</button>
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <p>You haven't added any songs yet.</p>
+    {% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.getElementById('songForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        const formData = new FormData(this);
+
+        fetch(this.action, {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Display success message
+                showMessage('success', data.song_info.message);
+                
+                // Clear the input field
+                document.querySelector('input[name="url"]').value = '';
+                
+                // Reload the page to show the updated list
+                location.reload();
+            } else {
+                showMessage('danger', data.error);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showMessage('danger', 'An unexpected error occurred.');
+        });
+    });
+
+    function showMessage(category, message) {
+        const resultDiv = document.getElementById('result');
+        resultDiv.innerHTML = `<div class="alert alert-${category}">${message}</div>`;
+        
+        // Automatically clear the message after 5 seconds
+        setTimeout(() => {
+            resultDiv.innerHTML = '';
+        }, 5000);
+    }
+
+    // Existing script for editing songs
+    document.querySelectorAll('.edit-song').forEach(button => {
+        button.addEventListener('click', function() {
+            const row = this.closest('tr');
+            row.querySelectorAll('input, textarea').forEach(input => input.readOnly = false);
+            this.style.display = 'none';
+            row.querySelector('.save-song').style.display = 'inline-block';
+        });
+    });
+
+    document.querySelectorAll('.save-song').forEach(button => {
+        button.addEventListener('click', function() {
+            const row = this.closest('tr');
+            const songId = row.dataset.songId;
+            const title = row.querySelector('.song-title').value;
+            const artist = row.querySelector('.song-artist').value;
+            const album = row.querySelector('.song-album').value;
+            const lengthInput = row.querySelector('.song-length').value;
+            const notes = row.querySelector('.song-notes').value;
+            const [minutes, seconds] = lengthInput.split(':').map(Number);
+            const length = (minutes * 60 + seconds) * 1000;
+            fetch('/edit_song/' + songId, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: JSON.stringify({ title, artist, album, length, notes })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    row.querySelectorAll('input, textarea').forEach(input => input.readOnly = true);
+                    this.style.display = 'none';
+                    row.querySelector('.edit-song').style.display = 'inline-block';
+                    showMessage('success', 'Song updated successfully!');
+                } else {
+                    showMessage('danger', data.error);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showMessage('danger', 'An unexpected error occurred.');
+            });
+        });
+    });
+
+    document.querySelectorAll('.delete-song').forEach(button => {
+        button.addEventListener('click', function() {
+            if (confirm('Are you sure you want to delete this song?')) {
+                const row = this.closest('tr');
+                const songId = row.dataset.songId;
+
+                fetch('/delete_song/' + songId, {
+                    method: 'POST',
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        row.remove();
+                        showMessage('success', 'Song deleted successfully!');
+                    } else {
+                        showMessage('danger', data.error);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    showMessage('danger', 'An unexpected error occurred.');
+                });
+            }
+        });
+    });
+</script>
 {% endblock %}
